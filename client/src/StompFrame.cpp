@@ -3,12 +3,12 @@
 
 class StompFrame {
     public:
-        static std::string create_connect_frame(const std::string& host, const std::string& username, const std::string& password){
+        static std::string create_connect_frame(const std::string& host, const std::string& username, const std::string& passcode){
             std::string frame = "CONNECT\n";
             frame += "accept-version:1.2\n";
             frame += "host:" + host + "\n";
             frame += "login:" + username + "\n";
-            frame += "passcode:" + password + "\n\n";
+            frame += "passcode:" + passcode + "\n\n";
             frame += '\0';
             return frame;
         };
