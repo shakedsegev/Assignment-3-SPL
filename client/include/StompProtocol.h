@@ -11,14 +11,19 @@ class StompProtocol {
         bool is_connected;
         std::map<int, std::string> receipt_to_action;
         std::map<std::string, int> channel_to_sub_id;
+        // Map: Game Name -> (Map: Reporter Name -> Vector of Events ordered by time)
+        std::map<std::string, std::map<std::string, std::vector<Event>>> game_reports;
 
     public:
+        bool should_terminate_flag;
+
         StompProtocol();
         ~StompProtocol();
 
-        std::string process_user_command(const std::string& input);
+        StompFrame process_user_command(const std::string& input);
 
-        std::map<std::string, Event> parse_event_from_body(const std::string& body);
-        void parse_server_frame(const std::string& frame, std::string& command, std::map<std::string, std::string>& headers, std::string& body);
+        std::string trim(const std::string &str);
+        std::string extract_value(const std::string &line, const std::string &prefix);
+        std::map<std::string, Event> parse_event_from_body(const std::string &body);
         void process_server_frame(const std::string& frame);
 };
