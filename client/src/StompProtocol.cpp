@@ -8,14 +8,21 @@
 StompProtocol::StompProtocol() : subscription_id_counter(1), receipt_id_counter(1), is_connected(false) {}
 StompProtocol::~StompProtocol() {}
 
-void StompProtocol::process_user_command(const std::string& input) {
+ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
         std::stringstream string_stream(input);
         std::string command;
         string_stream >> command;
 
+        ConnectionInfo connection_info = nullptr;
+
+        std::lock_guard<std::mutex> lock(key_mutex); // Lock game_reports, frame_queue, and should_terminate_flag during processing
+
         if (command == "login") {
             std::string host_port, username, passcode;
             string_stream >> host_port >> username >> passcode;
+            connection_info.host = host_port.substr(0, host_port.find(':'));
+            connection_info.port = std::stoi(host_port.substr(host_port.find(':') + 1));
+            connection_info.should_connect = true;
             frame_queue.push(StompFrame::create_connect_frame("stomp.cs.bgu.ac.il", username, passcode));
         }
 
@@ -90,13 +97,15 @@ void StompProtocol::process_user_command(const std::string& input) {
             }
             
         }
-
-    }
+        return connection_info;
+    } // unlocks here
 
 void StompProtocol::process_server_frame(const std::string& frame) {
     std::istringstream frame_stream(frame);
 
     StompFrame stomp_frame(frame);
+
+    std::lock_guard<std::mutex> lock(key_mutex); // Lock game_reports and should_terminate_flag during processing
 
     if(stomp_frame.command == "CONNECTED") {
         is_connected = true;
@@ -128,14 +137,19 @@ void StompProtocol::process_server_frame(const std::string& frame) {
         is_connected = false;
         should_terminate_flag = true;
     }
-    
+} // unlocks here
+
+bool StompProtocol::should_terminate() {
+    return should_terminate_flag;
 }
 
 bool StompProtocol::has_frames_to_send() {
+    std::lock_guard<std::mutex> lock(key_mutex); // Lock frame_queue during processing
     return !frame_queue.empty();
 }
 
 StompFrame StompProtocol::get_next_frame() {
+    std::lock_guard<std::mutex> lock(key_mutex); // Lock frame_queue during processing
     StompFrame frame = frame_queue.front();
     frame_queue.pop();
     return frame;

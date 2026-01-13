@@ -8,6 +8,8 @@
 class Event
 {
 private:
+    // name of user that created the event
+    std::string user_name;
     // name of team a
     std::string team_a_name;
     // name of team b
@@ -24,6 +26,9 @@ private:
     std::map<std::string, std::string> team_b_updates;
     // description of the event
     std::string description;
+
+    std::string trim(const std::string &str);
+    std::string extract_value(const std::string &line, const std::string &prefix);
 
 public:
     Event(std::string name, std::string team_a_name, std::string team_b_name, int time, std::map<std::string, std::string> game_updates, std::map<std::string, std::string> team_a_updates, std::map<std::string, std::string> team_b_updates, std::string discription);
