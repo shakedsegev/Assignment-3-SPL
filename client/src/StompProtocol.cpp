@@ -61,7 +61,7 @@ StompFrame StompProtocol::process_user_command(const std::string& input) {
             return StompFrame();//Not finished
         }
 
-        return StompFrame(); //Not finished
+        return StompFrame(); //Not finished yet
     }
 
 
