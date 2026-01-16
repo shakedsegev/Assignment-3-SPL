@@ -21,10 +21,14 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
             std::string host_port, username, passcode;
             string_stream >> host_port >> username >> passcode;
             current_user = username;
-            connection_info.host = host_port.substr(0, host_port.find(':'));
-            connection_info.port = std::stoi(host_port.substr(host_port.find(':') + 1));
+            size_t colon_pos = host_port.find(':');
+            connection_info.host = host_port.substr(0, colon_pos);
+            std::string port_str = host_port.substr(colon_pos + 1);
+            // Convert port string to unsigned short
+            connection_info.port = std::stoi(port_str);
             connection_info.should_connect = true;
-            frame_queue.push(StompFrame::create_connect_frame("stomp.cs.bgu.ac.il", username, passcode));
+            //frame_queue.push(StompFrame::create_connect_frame("stomp.cs.bgu.ac.il", username, passcode));
+            frame_queue.push(StompFrame::create_connect_frame(connection_info.host, username, passcode));
             return connection_info;
         }
         if (!is_connected) {
