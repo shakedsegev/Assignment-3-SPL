@@ -166,6 +166,8 @@ void StompProtocol::process_server_frame(const std::string& frame) {
             receipt_to_action.erase(receipt_id);
         }
     } else if (stomp_frame.command == "MESSAGE") {
+
+        //TODO: ***Need to fix*** we know the game_name from the id and use id to channel to get the name and not destination
         std::string destination = stomp_frame.headers["destination"];
         std::string game_name = destination.substr(1); // Remove leading '/'
         Event event(stomp_frame.body);
