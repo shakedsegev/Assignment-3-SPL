@@ -6,6 +6,7 @@
 #include <queue>
 #include <string>
 #include <map>
+#include "StompFrame.h"
 
 struct ConnectionInfo {
     std::string host;
@@ -16,6 +17,7 @@ struct ConnectionInfo {
 // TODO: implement the STOMP protocol
 class StompProtocol {
     private:
+        std::string current_user;
         std::mutex key_mutex; // Mutex for synchronizing access to game_reports, frame_queue, and should_terminate_flag
         std::queue<StompFrame> frame_queue;
         int subscription_id_counter;
@@ -43,4 +45,5 @@ class StompProtocol {
         bool should_terminate();
         bool has_frames_to_send();
         StompFrame get_next_frame();
+        void reset_termination();
 };

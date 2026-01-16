@@ -37,7 +37,7 @@
         body = remaining;
     }
 
-    static StompFrame create_connect_frame(const std::string& host, const std::string& username, const std::string& passcode){
+    StompFrame StompFrame::create_connect_frame(const std::string& host, const std::string& username, const std::string& passcode){
         std::string frame = "CONNECT\n";
         frame += "accept-version:1.2\n";
         frame += "host:" + host + "\n";
@@ -47,7 +47,7 @@
         return StompFrame(frame);
     };
 
-    static StompFrame create_subscribe_frame(const std::string& destination, int sub_id, int receipt_id){
+    StompFrame StompFrame::create_subscribe_frame(const std::string& destination, int sub_id, int receipt_id){
 
         std::string frame = "SUBSCRIBE\n";
         frame += "destination:" + destination + "\n";
@@ -57,7 +57,7 @@
         return StompFrame(frame);
     };
 
-    static StompFrame create_unsubscribe_frame(int sub_id, int receipt_id){
+    StompFrame StompFrame::create_unsubscribe_frame(int sub_id, int receipt_id){
         std::string frame = "UNSUBSCRIBE\n";
         frame += "id:" + std::to_string(sub_id) + "\n";
         frame += "receipt:" + std::to_string(receipt_id) + "\n\n";
@@ -65,15 +65,15 @@
         return StompFrame(frame);
     };
 
-    static StompFrame create_send_frame(const std::string& destination, const std::string& body){
+    StompFrame StompFrame::create_send_frame(const std::string& destination, const std::string& body){
         std::string frame = "SEND\n";
         frame += "destination:" + destination + "\n\n";
         frame += body + '\n';
         frame += '\0';
         return StompFrame(frame);
     };
-    
-    static StompFrame create_disconnect_frame(int receipt_id){
+
+    StompFrame StompFrame::create_disconnect_frame(int receipt_id){
         std::string frame = "DISCONNECT\n";
         frame += "receipt:" + std::to_string(receipt_id) + "\n\n";
         frame += '\0';

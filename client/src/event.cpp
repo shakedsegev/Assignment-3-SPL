@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <sstream>
+#include "event.h"
 using json = nlohmann::json;
 
 Event::Event(std::string user_name, std::string team_a_name, std::string team_b_name, std::string name, int time,
@@ -112,11 +113,13 @@ const std::string &Event::get_discription() const
     return this->description;
 }
 
-Event::Event(const std::string &frame_body) : team_a_name(""), team_b_name(""), name(""), time(0), game_updates(), team_a_updates(), team_b_updates(), description("")
+const std::string &Event::get_user_name() const
 {
+    return this->user_name;
 }
 
-names_and_events parseEventsFile(std::string json_path)
+
+names_and_events parseEventsFile(std::string json_path , std::string user_name)
 {
     std::ifstream f(json_path);
     json data = json::parse(f);
@@ -157,8 +160,8 @@ names_and_events parseEventsFile(std::string json_path)
             else
                 team_b_updates[update.key()] = update.value().dump();
         }
-        
-        events.push_back(Event(team_a_name, team_b_name, name, time, game_updates, team_a_updates, team_b_updates, description));
+
+        events.push_back(Event(user_name, team_a_name, team_b_name, name, time, game_updates, team_a_updates, team_b_updates, description));
     }
     names_and_events events_and_names{team_a_name, team_b_name, events};
 
@@ -175,4 +178,33 @@ std::string Event::trim(const std::string& str) {
 
 std::string Event::extract_value(const std::string& line, const std::string& prefix) {
     return trim(line.substr(prefix.length()));
+}
+
+std::string Event::to_string() const {
+    std::stringstream ss;
+    
+    ss << "user: " << user_name << "\n";
+    ss << "team a: " << team_a_name << "\n";
+    ss << "team b: " << team_b_name << "\n";
+    ss << "event name: " << name << "\n";
+    ss << "time: " << time << "\n";
+    
+    ss << "general game updates:\n";
+    for (const auto& update : game_updates) {
+        ss << "\t" << update.first << ": " << update.second << "\n";
+    }
+    
+    ss << "team a updates:\n";
+    for (const auto& update : team_a_updates) {
+        ss << "\t" << update.first << ": " << update.second << "\n";
+    }
+    
+    ss << "team b updates:\n";
+    for (const auto& update : team_b_updates) {
+        ss << "\t" << update.first << ": " << update.second << "\n";
+    }
+    
+    ss << "description:\n" << description;
+    
+    return ss.str();
 }

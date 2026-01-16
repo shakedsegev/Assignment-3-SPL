@@ -4,6 +4,7 @@
 #include <sstream>
 #include "StompProtocol.h"
 #include "StompFrame.h"
+#include <fstream>
 
 StompProtocol::StompProtocol() : subscription_id_counter(1), receipt_id_counter(1), is_connected(false) {}
 StompProtocol::~StompProtocol() {}
@@ -13,17 +14,24 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
         std::string command;
         string_stream >> command;
 
-        ConnectionInfo connection_info = nullptr;
+        ConnectionInfo connection_info;
+        connection_info.host = "";
+        connection_info.port = 0;
 
         std::lock_guard<std::mutex> lock(key_mutex); // Lock game_reports, frame_queue, and should_terminate_flag during processing
 
         if (command == "login") {
             std::string host_port, username, passcode;
             string_stream >> host_port >> username >> passcode;
+            current_user = username;
             connection_info.host = host_port.substr(0, host_port.find(':'));
             connection_info.port = std::stoi(host_port.substr(host_port.find(':') + 1));
             connection_info.should_connect = true;
             frame_queue.push(StompFrame::create_connect_frame("stomp.cs.bgu.ac.il", username, passcode));
+        }
+        if (!is_connected) {
+                std::cout << "You must be logged in to do other commands." << std::endl;
+                return connection_info;
         }
 
         if (command == "join") {
@@ -59,7 +67,7 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
             string_stream >> file_path;
 
             // Use the provided parser from event.cpp
-            names_and_events parsed = parseEventsFile(file_path);
+            names_and_events parsed = parseEventsFile(file_path, current_user);
             std::string game_name = parsed.team_a_name + "_" + parsed.team_b_name;
 
             for (const auto& event : parsed.events) {
@@ -75,27 +83,57 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
             std::string game_name, user, file_path;
             string_stream >> game_name >> user >> file_path;
 
+            // Extract the events for the specified game and user
             if (game_reports.count(game_name) && game_reports[game_name].count(user)) {
                 std::vector<Event>& events = game_reports[game_name][user];
-                std::stringstream ss;
+                
+                // Sort events by time (in case they are not sorted due to delay or network issues)
+                std::sort(events.begin(), events.end(), [](const Event& a, const Event& b) {
+                    return a.get_time() < b.get_time();
+                });
 
-                // Sort events by time if necessary
-                // Format the output header
-                ss << events[0].get_team_a_name() << " vs " << events[0].get_team_b_name() << "\n";
-                ss << "Game stats:\nGeneral stats:\n";
-
-                // Aggregate statistics and descriptions from all events
+                // Maps to hold aggregated stats from all events 
+                std::map<std::string, std::string> general_stats;
+                std::map<std::string, std::string> team_a_stats;
+                std::map<std::string, std::string> team_b_stats;
+                
+                // Aggregate stats from all events to maps
                 for (const auto& event : events) {
-                    ss << event.get_time() << " - " << event.get_name() << ":\n";
-                    ss << event.get_discription() << "\n";
+                    for (auto const& [key, val] : event.get_game_updates()) general_stats[key] = val;
+                    for (auto const& [key, val] : event.get_team_a_updates()) team_a_stats[key] = val;
+                    for (auto const& [key, val] : event.get_team_b_updates()) team_b_stats[key] = val;
                 }
 
-                // Write to file
+                std::stringstream ss;
+                std::string team_a = events[0].get_team_a_name();
+                std::string team_b = events[0].get_team_b_name();
+                
+                // Generate game name according to format
+                ss << team_a << " vs " << team_b << "\n";
+                // Start writing stats in lexographic order since maps are sorted by key
+                ss << "Game stats:\n";
+                
+                ss << "General stats:\n";
+                for (auto const& [key, val] : general_stats) ss << key << ": " << val << "\n";
+                
+                ss << team_a << " stats:\n";
+                for (auto const& [key, val] : team_a_stats) ss << key << ": " << val << "\n";
+                
+                ss << team_b << " stats:\n";
+                for (auto const& [key, val] : team_b_stats) ss << key << ": " << val << "\n";
+                // Now write all events in chronological order
+                ss << "Game event reports:\n";
+                for (const auto& event : events) {
+                    ss << event.get_time() << " - " << event.get_name() << ":\n\n";
+                    ss << event.get_discription() << "\n\n";
+                }
+                // Finally, write the summary to the specified file
                 std::ofstream out_file(file_path);
-                out_file << ss.str();
-                out_file.close();
+                if (out_file.is_open()) {
+                    out_file << ss.str();
+                    out_file.close();
+                }
             }
-            
         }
         return connection_info;
     } // unlocks here
@@ -150,7 +188,14 @@ bool StompProtocol::has_frames_to_send() {
 
 StompFrame StompProtocol::get_next_frame() {
     std::lock_guard<std::mutex> lock(key_mutex); // Lock frame_queue during processing
+    if (frame_queue.empty()) {
+        return StompFrame("EMPTY", {}, ""); 
+    }
     StompFrame frame = frame_queue.front();
     frame_queue.pop();
     return frame;
+}
+void StompProtocol::reset_termination() {
+    std::lock_guard<std::mutex> lock(key_mutex); // Lock should_terminate_flag during processing
+    should_terminate_flag = false;
 }
