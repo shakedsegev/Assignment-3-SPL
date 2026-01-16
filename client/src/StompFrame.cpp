@@ -83,8 +83,8 @@
     std::string StompFrame::to_string() const {
         std::string frame_str = command + "\n";
 
-        for (auto const& [key, value] : headers) {
-            frame_str += key + ":" + value + "\n";
+        for (auto const& header : headers) {
+            frame_str += header.first + ":" + header.second + "\n";
         }
         // Blank line to separate headers from body
         frame_str += "\n";

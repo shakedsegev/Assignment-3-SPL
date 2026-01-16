@@ -9,8 +9,8 @@
 #include "StompFrame.h"
 
 struct ConnectionInfo {
-    std::string host;
-    short port;
+    std::string host = "";
+    unsigned short port = 0;
     bool should_connect = false;
 };
 

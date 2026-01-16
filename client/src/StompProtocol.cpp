@@ -3,10 +3,9 @@
 #include <map>
 #include <sstream>
 #include "StompProtocol.h"
-#include "StompFrame.h"
 #include <fstream>
 
-StompProtocol::StompProtocol() : subscription_id_counter(1), receipt_id_counter(1), is_connected(false) {}
+StompProtocol::StompProtocol() : current_user(""), key_mutex(), frame_queue(), subscription_id_counter(1), receipt_id_counter(1), is_connected(false), should_terminate_flag(false), receipt_to_action(), channel_to_sub_id(), game_reports() {}
 StompProtocol::~StompProtocol() {}
 
 ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
@@ -15,8 +14,6 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
         string_stream >> command;
 
         ConnectionInfo connection_info;
-        connection_info.host = "";
-        connection_info.port = 0;
 
         std::lock_guard<std::mutex> lock(key_mutex); // Lock game_reports, frame_queue, and should_terminate_flag during processing
 
@@ -28,6 +25,7 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
             connection_info.port = std::stoi(host_port.substr(host_port.find(':') + 1));
             connection_info.should_connect = true;
             frame_queue.push(StompFrame::create_connect_frame("stomp.cs.bgu.ac.il", username, passcode));
+            return connection_info;
         }
         if (!is_connected) {
                 std::cout << "You must be logged in to do other commands." << std::endl;
@@ -99,9 +97,9 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
                 
                 // Aggregate stats from all events to maps
                 for (const auto& event : events) {
-                    for (auto const& [key, val] : event.get_game_updates()) general_stats[key] = val;
-                    for (auto const& [key, val] : event.get_team_a_updates()) team_a_stats[key] = val;
-                    for (auto const& [key, val] : event.get_team_b_updates()) team_b_stats[key] = val;
+                    for (auto const& it : event.get_game_updates()) general_stats[it.first] = it.second;
+                    for (auto const& it : event.get_team_a_updates()) team_a_stats[it.first] = it.second;
+                    for (auto const& it : event.get_team_b_updates()) team_b_stats[it.first] = it.second;
                 }
 
                 std::stringstream ss;
@@ -114,13 +112,13 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
                 ss << "Game stats:\n";
                 
                 ss << "General stats:\n";
-                for (auto const& [key, val] : general_stats) ss << key << ": " << val << "\n";
+                for (auto const& it : general_stats) ss << it.first << ": " << it.second << "\n";
                 
                 ss << team_a << " stats:\n";
-                for (auto const& [key, val] : team_a_stats) ss << key << ": " << val << "\n";
-                
+                for (auto const& it : team_a_stats) ss << it.first << ": " << it.second << "\n";
+
                 ss << team_b << " stats:\n";
-                for (auto const& [key, val] : team_b_stats) ss << key << ": " << val << "\n";
+                for (auto const& it : team_b_stats) ss << it.first << ": " << it.second << "\n";
                 // Now write all events in chronological order
                 ss << "Game event reports:\n";
                 for (const auto& event : events) {
