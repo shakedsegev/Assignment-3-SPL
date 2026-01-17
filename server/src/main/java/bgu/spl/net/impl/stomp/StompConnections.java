@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import bgu.spl.net.srv.ConnectionHandler;
 import bgu.spl.net.srv.Connections;
-import bgu.spl.net.impl.stomp.StompFrame;
 
 public class StompConnections implements Connections<String> {
 
@@ -16,8 +15,6 @@ public class StompConnections implements Connections<String> {
     // Maps channelName -> (connectionId -> clientSubscriptionId)
     private final ConcurrentHashMap<String, ConcurrentHashMap<Integer, String>> channels = new ConcurrentHashMap<>();
     
-    // Counter for connection IDs
-    private int connectionIdCounter = 0;
 
     // MessageId incremented everytime a Message frame is sent
     private AtomicInteger messageId = new AtomicInteger(0);
