@@ -68,11 +68,10 @@ public class StompFrame {
 
     /**
      * Creates a CONNECTED frame.
-     * @param version The STOMP version "1.2" in our case
      */
-    public static StompFrame createConnectedFrame(String version) {
+    public static StompFrame createConnectedFrame() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("version", version);
+        headers.put("version", "1.2");
         return new StompFrame("CONNECTED", headers, "");
     }
 
