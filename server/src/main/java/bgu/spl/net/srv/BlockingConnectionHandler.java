@@ -35,10 +35,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
                 T nextMessage = encdec.decodeNextByte((byte) read);
                 if (nextMessage != null) {
                     protocol.process(nextMessage);
-                    if (response != null) {
-                        out.write(encdec.encode(response));
-                        out.flush();
-                    }
                 }
             }
 
@@ -56,6 +52,16 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-        //IMPLEMENT IF NEEDED
+        if (msg != null) {
+            try {
+                // 'send' can be called by other threads thus we need to write and flush the buffer atomicaly
+                synchronized (out) {
+                    out.write(encdec.encode(msg));
+                    out.flush();
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }
