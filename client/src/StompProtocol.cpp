@@ -55,6 +55,8 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
                 receipt_to_action[receipt_id] = "Exited channel " + game_name;
                 channel_to_sub_id.erase(game_name);
                 frame_queue.push(StompFrame::create_unsubscribe_frame(sub_id, receipt_id));
+            } else {
+                std::cout << "You are not subscribed to channel " << game_name << std::endl;
             }
         }
 
@@ -72,13 +74,16 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
             names_and_events parsed = parseEventsFile(file_path, current_user);
             std::string game_name = parsed.team_a_name + "_" + parsed.team_b_name;
 
-            for (const auto& event : parsed.events) {
-                // Create a SEND frame for each event
-                // And add them to the queue.
-                StompFrame frame = StompFrame::create_send_frame("/" + game_name, event.to_string());
-                frame_queue.push(frame);
+            if (channel_to_sub_id.count(game_name)) {
+                for (const auto& event : parsed.events) {
+                    // Create a SEND frame for each event
+                    // And add them to the queue.
+                    StompFrame frame = StompFrame::create_send_frame("/" + game_name, event.to_string());
+                    frame_queue.push(frame);
+                }
+            } else {
+                std::cout << "You must join the channel " << game_name << " before reporting events for it." << std::endl;
             }
-          
         }
 
         if (command == "summary") {
@@ -167,7 +172,7 @@ void StompProtocol::process_server_frame(const std::string& frame) {
         }
     } else if (stomp_frame.command == "MESSAGE") {
 
-        //TODO: ***Need to fix*** we know the game_name from the id and use id to channel to get the name and not destination
+        //TODO: ***Maybe need to fix*** we know the game_name from the id and use id to channel to get the name and not destination
         std::string destination = stomp_frame.headers["destination"];
         std::string game_name = destination.substr(1); // Remove leading '/'
         Event event(stomp_frame.body);

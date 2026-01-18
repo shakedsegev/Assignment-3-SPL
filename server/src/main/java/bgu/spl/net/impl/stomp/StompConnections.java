@@ -31,7 +31,6 @@ public class StompConnections implements Connections<String> {
 
     @Override
     public void send(String channel, String msg) {
-
         ConcurrentHashMap<Integer, String> channelSubscribers = channels.get(channel);
 
         // Channel does not exist

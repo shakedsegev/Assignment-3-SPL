@@ -9,6 +9,7 @@ the methods below.
 """
 
 import socket
+import sqlite3
 import sys
 import threading
 
@@ -30,38 +31,61 @@ def recv_null_terminated(sock: socket.socket) -> str:
 
 
 def init_database():
-    pass
-
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    # USERS table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users 
+                     (username TEXT PRIMARY KEY, password TEXT, registration_date DATETIME)''')
+    # LOGIN HISTORY table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS login_history 
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, 
+                      login_time DATETIME, logout_time DATETIME)''')
+    # FILE TRACKING table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS file_tracking 
+                     (username TEXT, filename TEXT, upload_time DATETIME, game_channel TEXT)''')
+    conn.commit()
+    conn.close()
 
 def execute_sql_command(sql_command: str) -> str:
-    return "done"
-
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute(sql_command)
+        conn.commit()
+        conn.close()
+        return "SUCCESS"
+    except Exception as e:
+        return f"ERROR: {str(e)}"
 
 def execute_sql_query(sql_query: str) -> str:
-    return "done"
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+        rows = cursor.fetchall()
+        conn.close()
+        return "SUCCESS|" + "|".join([str(row) for row in rows])
+    except Exception as e:
+        return f"ERROR: {str(e)}"
 
 
 def handle_client(client_socket: socket.socket, addr):
-    print(f"[{SERVER_NAME}] Client connected from {addr}")
-
     try:
         while True:
             message = recv_null_terminated(client_socket)
-            if message == "":
+            if not message: 
                 break
-
-            print(f"[{SERVER_NAME}] Received:")
-            print(message)
-
-            client_socket.sendall(b"done\0")
-
+            
+            if message.strip().upper().startswith("SELECT"):
+                response = execute_sql_query(message)
+            else:
+                response = execute_sql_command(message)
+            
+            client_socket.sendall(response.encode("utf-8") + b"\0")
     except Exception as e:
         print(f"[{SERVER_NAME}] Error handling client {addr}: {e}")
     finally:
-        try:
-            client_socket.close()
-        except Exception:
-            pass
+        client_socket.close()
         print(f"[{SERVER_NAME}] Client {addr} disconnected")
 
 

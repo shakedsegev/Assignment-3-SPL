@@ -14,7 +14,6 @@ public class StompServer {
         int port = Integer.parseInt(args[0]);
         String serverType = args[1];
         
-        
         Connections<String> connections = new StompConnections();
 
         if (serverType.equals("tpc")) {

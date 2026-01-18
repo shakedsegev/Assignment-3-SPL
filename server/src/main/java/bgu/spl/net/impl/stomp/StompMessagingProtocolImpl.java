@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import bgu.spl.net.api.StompMessagingProtocol;
+import bgu.spl.net.impl.data.Database;
+import bgu.spl.net.impl.data.LoginStatus;
 import bgu.spl.net.srv.Connections;
 
 public class StompMessagingProtocolImpl implements StompMessagingProtocol<String>{
@@ -15,6 +17,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
     // Key: Subscription ID, Value: Channel Name
     private Map<String, String> activeSubscriptions = new HashMap<>();
+    private String current_user;
     
     /**
 	 * Used to initiate the current client protocol with it's personal connection ID and the connections implementation
@@ -70,35 +73,52 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
     private void handleConnect(StompFrame frame) {
         
-        if (isLoggedIn) {
-            sendError("User already logged in", "Logout first before trying to log in again", null);
-            return;
-        }
-
         String login = frame.getHeaders().get("login");
         String passcode = frame.getHeaders().get("passcode");
         String receipt = frame.getHeaders().get("receipt");
-        
-        if (login == null || passcode == null) {
-            sendError("Missing headers", "login and/or passcode header missing...", receipt);
-            return;
+
+        LoginStatus status = Database.getInstance().login(connectionId, login, passcode);
+
+        switch (status) {
+            case LOGGED_IN_SUCCESSFULLY:
+            case ADDED_NEW_USER:
+                // Set protocol state
+                this.isLoggedIn = true;
+                this.current_user = login;
+                
+                connectionsInstance.send(connectionId, StompFrame.createConnectedFrame().toString());
+                
+                if (receipt != null) sendReceipt(receipt);
+                break;
+
+            case ALREADY_LOGGED_IN:
+                sendError("User already logged in", "User '" + login + "' is already active from another client", receipt);
+                break;
+
+            case WRONG_PASSWORD:
+                sendError("Wrong password", "Password mismatch for user '" + login + "'", receipt);
+                break;
+
+            case CLIENT_ALREADY_CONNECTED:
+                sendError("Client already connected", "This socket is already associated with an active user", receipt);
+                break;
+
+            default:
+                sendError("Login failed", "An unknown error occurred during authentication", receipt);
         }
-        
-        // TODO: Add User/Password check logic here later
-        // Check in DB
-        // Check password
-
-        isLoggedIn = true;
-        connectionsInstance.send(connectionId, StompFrame.createConnectedFrame().toString());
-
-        if (receipt != null) sendReceipt(receipt);
     }
 
     private void handleSubscribe(StompFrame frame) {
+        
+        if (!isLoggedIn) {
+            sendError("User not logged in", "Please log in first", null);
+            return;
+        }
+        
         String topic = frame.getHeaders().get("destination");
         String id = frame.getHeaders().get("id");
         String receipt = frame.getHeaders().get("receipt");
-
+        
         if (topic == null || id == null) {
             sendError("Missing headers", "destination or id headers missing..." , receipt);
             return;
@@ -112,6 +132,12 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     }
     
     private void handleUnsubscribe(StompFrame frame) {
+        
+        if (!isLoggedIn) {
+            sendError("User not logged in", "Please log in first", null);
+            return;
+        }
+        
         String id = frame.getHeaders().get("id");
         String receipt = frame.getHeaders().get("receipt");
 
@@ -129,11 +155,18 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         }
 
         ((StompConnections) connectionsInstance).unsubscribe(id, connectionId);
+        activeSubscriptions.remove(id);
         
         if (receipt != null) sendReceipt(receipt);
     }
 
     private void handleSend(StompFrame frame) {
+        
+        if (!isLoggedIn) {
+            sendError("User not logged in", "Please log in first", null);
+            return;
+        }
+        
         String topic = frame.getHeaders().get("destination");
         String receipt = frame.getHeaders().get("receipt");
 
@@ -147,20 +180,33 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
             sendError("Not Subscribed", "Cannot send to channel you are not subscribed to", receipt);
             return;
         }
-
         String event = frame.getBody();
+
+        if (event.contains("event name:")) {
+            Database.getInstance().trackFileUpload(current_user, "Game_Reports", topic);
+        }
 
         // Send event string to channel (will be wrapped as a frame in send)
         connectionsInstance.send(topic, event);
     }
 
     private void handleDisconnect(StompFrame frame) {
+        
+        if (!isLoggedIn) {
+            sendError("User not logged in", "Please log in first", null);
+            return;
+        }
+        
         String receipt = frame.getHeaders().get("receipt");
         
+        if (receipt != null) sendReceipt(receipt);
+        
+        Database.getInstance().logout(connectionId);
+
         shouldTerminate = true;
+
         connectionsInstance.disconnect(connectionId);
 
-        if (receipt != null) sendReceipt(receipt);
     }
     
     private void sendReceipt(String receiptId) {
@@ -170,9 +216,9 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         connectionsInstance.send(connectionId, receipt.toString());
     }
 
-    private void sendError(String msg, String description, String receitId) {
+    private void sendError(String msg, String description, String receiptId) {
 
-        StompFrame errorFrame = StompFrame.createErrorFrame(msg, description, receitId);
+        StompFrame errorFrame = StompFrame.createErrorFrame(msg, description, receiptId);
 
         connectionsInstance.send(connectionId, errorFrame.toString());
         shouldTerminate = true;
