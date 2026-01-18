@@ -43,7 +43,6 @@
         frame += "host:" + host + "\n";
         frame += "login:" + username + "\n";
         frame += "passcode:" + passcode + "\n\n";
-        frame += '\0';
         return StompFrame(frame);
     };
 
@@ -53,7 +52,6 @@
         frame += "destination:" + destination + "\n";
         frame += "id:" + std::to_string(sub_id) + "\n";
         frame += "receipt:" + std::to_string(receipt_id) + "\n\n";
-        frame += '\0';
         return StompFrame(frame);
     };
 
@@ -61,7 +59,6 @@
         std::string frame = "UNSUBSCRIBE\n";
         frame += "id:" + std::to_string(sub_id) + "\n";
         frame += "receipt:" + std::to_string(receipt_id) + "\n\n";
-        frame += '\0';
         return StompFrame(frame);
     };
 
@@ -69,14 +66,12 @@
         std::string frame = "SEND\n";
         frame += "destination:" + destination + "\n\n";
         frame += body + '\n';
-        frame += '\0';
         return StompFrame(frame);
     };
 
     StompFrame StompFrame::create_disconnect_frame(int receipt_id){
         std::string frame = "DISCONNECT\n";
         frame += "receipt:" + std::to_string(receipt_id) + "\n\n";
-        frame += '\0';
         return StompFrame(frame);
     };
 
@@ -90,6 +85,6 @@
         frame_str += "\n";
 
         frame_str += body;
-        frame_str += '\0';
+        // frame_str += '\0';
         return frame_str;
     };
