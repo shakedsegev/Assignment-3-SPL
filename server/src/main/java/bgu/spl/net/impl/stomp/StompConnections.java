@@ -4,13 +4,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import bgu.spl.net.srv.ConnectionHandler;
-import bgu.spl.net.srv.Connections;
+import bgu.spl.net.Mysrv.MyConnectionHandler;
+import bgu.spl.net.Mysrv.MyConnections;
 
-public class StompConnections implements Connections<String> {
+public class StompConnections implements MyConnections<String> {
 
     // Maps connectionId -> connectionHandler of the client with that ID
-    private final ConcurrentHashMap<Integer, ConnectionHandler<String>> activeConnections = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, MyConnectionHandler<String>> activeConnections = new ConcurrentHashMap<>();
 
     // Maps channelName -> (connectionId -> clientSubscriptionId)
     private final ConcurrentHashMap<String, ConcurrentHashMap<Integer, String>> channels = new ConcurrentHashMap<>();
@@ -21,7 +21,7 @@ public class StompConnections implements Connections<String> {
 
     @Override
     public boolean send(int connectionId, String msg) {
-        ConnectionHandler<String> handler = activeConnections.get(connectionId);
+        MyConnectionHandler<String> handler = activeConnections.get(connectionId);
         if (handler != null) {
             handler.send(msg); 
             return true;
@@ -62,7 +62,7 @@ public class StompConnections implements Connections<String> {
     }
 
     // Add a new connection
-    public void addConnection(int id, ConnectionHandler<String> handler) {
+    public void addConnection(int id, MyConnectionHandler<String> handler) {
         activeConnections.put(id, handler);
     }
 

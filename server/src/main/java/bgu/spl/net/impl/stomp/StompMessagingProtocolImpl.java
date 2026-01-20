@@ -3,17 +3,17 @@ package bgu.spl.net.impl.stomp;
 import java.util.HashMap;
 import java.util.Map;
 
+import bgu.spl.net.Mysrv.MyConnections;
 import bgu.spl.net.api.StompMessagingProtocol;
 import bgu.spl.net.impl.data.Database;
 import bgu.spl.net.impl.data.LoginStatus;
-import bgu.spl.net.srv.Connections;
 
 public class StompMessagingProtocolImpl implements StompMessagingProtocol<String>{
     
     private boolean shouldTerminate = false;
     private boolean isLoggedIn = false;
     private int connectionId;
-    private Connections<String> connectionsInstance;
+    private MyConnections<String> connectionsInstance;
 
     // Key: Subscription ID, Value: Channel Name
     private Map<String, String> activeSubscriptions = new HashMap<>();
@@ -23,7 +23,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 	 * Used to initiate the current client protocol with it's personal connection ID and the connections implementation
 	**/
     @Override
-    public void start(int connectionId, Connections<String> connections) {
+    public void start(int connectionId, MyConnections<String> connections) {
         this.connectionId = connectionId;
         this.connectionsInstance = connections;
     }

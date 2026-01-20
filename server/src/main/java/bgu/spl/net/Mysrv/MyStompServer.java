@@ -1,11 +1,11 @@
-package bgu.spl.net.srv;
+package bgu.spl.net.Mysrv;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
-import bgu.spl.net.api.MessagingProtocol;
+import bgu.spl.net.api.StompMessagingProtocol;
 import java.io.Closeable;
 import java.util.function.Supplier;
 
-public interface Server<T> extends Closeable {
+public interface MyStompServer<T> extends Closeable {
 
     /**
      * The main loop of the server, Starts listening and handling new clients.
@@ -20,14 +20,15 @@ public interface Server<T> extends Closeable {
      * @param <T> The Message Object for the protocol
      * @return A new Thread per client server
      */
-    public static <T> Server<T>  threadPerClient(
+    public static <T> MyStompServer<T>  threadPerClient(
             int port,
-            Supplier<MessagingProtocol<T> > protocolFactory,
-            Supplier<MessageEncoderDecoder<T> > encoderDecoderFactory) {
+            Supplier<StompMessagingProtocol<T> > protocolFactory,
+            Supplier<MessageEncoderDecoder<T> > encoderDecoderFactory,
+            MyConnections<T> connections) {
 
-        return new BaseServer<T>(port, protocolFactory, encoderDecoderFactory) {
+        return new MyBaseServer<T>(port, protocolFactory, encoderDecoderFactory, connections) {
             @Override
-            protected void execute(BlockingConnectionHandler<T>  handler) {
+            protected void execute(MyBlockingConnectionHandler<T>  handler) {
                 new Thread(handler).start();
             }
         };
@@ -43,12 +44,13 @@ public interface Server<T> extends Closeable {
      * @param <T> The Message Object for the protocol
      * @return A new reactor server
      */
-    public static <T> Server<T> reactor(
+    public static <T> MyStompServer<T> reactor(
             int nthreads,
             int port,
-            Supplier<MessagingProtocol<T>> protocolFactory,
-            Supplier<MessageEncoderDecoder<T>> encoderDecoderFactory) {
-        return new Reactor<T>(nthreads, port, protocolFactory, encoderDecoderFactory);
+            Supplier<StompMessagingProtocol<T>> protocolFactory,
+            Supplier<MessageEncoderDecoder<T>> encoderDecoderFactory,
+            MyConnections<T> connections) {
+        return new MyStompReactor<T>(nthreads, port, protocolFactory, encoderDecoderFactory, connections);
     }
 
 }
