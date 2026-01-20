@@ -18,6 +18,12 @@ ConnectionInfo StompProtocol::process_user_command(const std::string& input) {
         std::lock_guard<std::mutex> lock(key_mutex); // Lock game_reports, frame_queue, and should_terminate_flag during processing
 
         if (command == "login") {
+
+            if(is_connected) {
+                std::cout << "You are already logged in. Please logout before trying to login again." << std::endl;
+                return connection_info;
+            }
+
             std::string host_port, username, passcode;
             string_stream >> host_port >> username >> passcode;
             current_user = username;

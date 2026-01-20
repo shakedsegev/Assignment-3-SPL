@@ -80,7 +80,7 @@ def handle_client(client_socket: socket.socket, addr):
                 response = execute_sql_query(message)
             else:
                 response = execute_sql_command(message)
-            
+                            
             client_socket.sendall(response.encode("utf-8") + b"\0")
     except Exception as e:
         print(f"[{SERVER_NAME}] Error handling client {addr}: {e}")
@@ -90,6 +90,9 @@ def handle_client(client_socket: socket.socket, addr):
 
 
 def start_server(host="127.0.0.1", port=7778):
+    
+    init_database()
+    
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 

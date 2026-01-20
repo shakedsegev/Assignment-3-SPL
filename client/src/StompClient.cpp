@@ -6,6 +6,7 @@
 #include "../include/StompProtocol.h"
 
 int main(int argc, char *argv[]) {
+    std::string pending_line;
     // The outer loop allows the app to stay open even if we logout/disconnect
     while (true) {
 		
@@ -16,10 +17,18 @@ int main(int argc, char *argv[]) {
         // Active session of a user
         while (!protocol.should_terminate()) {
             std::string line;
-            if (!std::getline(std::cin, line)) break;
+            if (!pending_line.empty()) {
+                line = pending_line;
+                pending_line.clear();
+            } else {
+                if (!std::getline(std::cin, line)) break;
             
-            // Check if during the wait for user input, the network thread decided to terminate
-            if (protocol.should_terminate()) break;
+                // Check if during the wait for user input, the network thread decided to terminate
+                if (protocol.should_terminate()) {
+                    pending_line = line;
+                    break;
+                }
+            }
 
             ConnectionInfo info = protocol.process_user_command(line);
 
